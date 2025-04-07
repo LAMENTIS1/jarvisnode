@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobius Play-Eyes Animation</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: black;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        .logo {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            color: #00FFFF;
+            font-family: sans-serif;
+            font-size: 1.5rem;
+            font-weight: bold;
+            letter-spacing: 0.1em;
+            z-index: 200;
+        }
+
+        .container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            z-index: 50;
+        }
+
+        #toggle {
+            display: none;
+        }
+
+        /* Long Press Indicator */
+        .longpress-indicator {
+            position: fixed;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 3px solid #00FFFF;
+            pointer-events: none;
+            opacity: 0;
+            z-index: 150;
+            transition: opacity 0.2s ease;
+        }
+
+        .longpress-indicator.active {
+            opacity: 1;
+            animation: longpress-progress 1.5s linear forwards;
+        }
+
+        @keyframes longpress-progress {
+            from {
+                background: radial-gradient(circle, transparent 65%, rgba(0, 255, 255, 0.5) 66%);
+            }
+            to {
+                background: radial-gradient(circle, rgba(0, 255, 255, 0.5) 0%, rgba(0, 255, 255, 0.5) 66%);
+            }
+        }
+
+        /* Play Button */
+        .play-button {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #toggle:checked~.play-button {
+            transform: scale(0) rotate(90deg);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .play-wrapper {
+            position: relative;
+            width: 128px;
+            height: 128px;
+        }
+
+        .play-glow {
+            position: absolute;
+            inset: -16px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0, 255, 255, 0.2) 0%, transparent 70%);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.5;
+                transform: scale(1.1);
+            }
+        }
+
+        .play-outer {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: rgba(0, 255, 255, 0.1);
+            backdrop-filter: blur(8px);
+            transition: background 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .play-button:hover .play-outer {
+            background: rgba(0, 255, 255, 0.2);
+        }
+
+        .play-inner {
+            position: absolute;
+            inset: 16px;
+            border-radius: 50%;
+            background: #00FFFF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .play-button:hover .play-inner {
+            transform: scale(0.95);
+        }
+
+        .play-button:active .play-inner {
+            transform: scale(0.9);
+        }
+
+        .play-icon {
+            width: 0;
+            height: 0;
+            margin-left: 8px;
+            border-style: solid;
+            border-width: 20px 0 20px 32px;
+            border-color: transparent transparent transparent black;
+        }
+
+        /* Eyes */
+        .eyes {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: scale(0) rotate(-90deg);
+            opacity: 0;
+            cursor: pointer;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #toggle:checked~.eyes {
+            transform: scale(1) rotate(0);
+            opacity: 1;
+        }
+
+        .eyes-wrapper {
+            display: flex;
+            gap: 1rem;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .eyes:hover .eyes-wrapper {
+            transform: scale(1.05);
+        }
+
+        .eye {
+            width: 1.75rem;
+            height: 6rem;
+            background: #00FFFF;
+            border-radius: 1.5rem;
+            box-shadow:
+                0 0 20px rgba(0, 255, 255, 0.7),
+                0 0 40px rgba(0, 255, 255, 0.5),
+                0 0 60px rgba(0, 255, 255, 0.3),
+                inset 0 0 15px rgba(255, 255, 255, 0.2);
+            transition: all 100ms ease-in-out;
+        }
+
+        .emotion-blinking {
+            transform: scaleY(0.2);
+            transform-origin: center;
+        }
+
+        .emotion-thinking {
+            animation: pulse 1.5s infinite;
+        }
+
+        /* Audio visualization */
+        .listening-container {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.5s ease;
+        }
+
+        .listening-container.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .audio-bar {
+            width: 0.75rem;
+            height: 4rem;
+            background-color: #00FFFF;
+            border-radius: 1rem;
+            box-shadow:
+                0 0 20px rgba(0, 255, 255, 0.7),
+                0 0 40px rgba(0, 255, 255, 0.5),
+                0 0 60px rgba(0, 255, 255, 0.3);
+            transition: height 0.12s ease;
+            transform-origin: bottom;
+        }
+
+        .button-container {
+            position: absolute;
+            bottom: -200px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.75rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        #toggle:checked~.button-container {
+            opacity: 1;
+        }
+
+        .emotion-btn {
+            background-color: rgba(0, 255, 255, 0.1);
+            color: #00FFFF;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+            transition: all 100ms ease;
+            text-transform: uppercase;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            z-index: 110;
+        }
+
+        .emotion-btn:hover {
+            background-color: rgba(0, 255, 255, 0.2);
+            border-color: rgba(0, 255, 255, 0.5);
+        }
+
+        .recording-indicator {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 1rem;
+            height: 1rem;
+            background-color: #FF3333;
+            border-radius: 50%;
+            box-shadow: 0 0 15px rgba(255, 51, 51, 0.7);
+            animation: pulse 1.5s infinite;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 200;
+        }
+
+        .recording-indicator.active {
+            opacity: 1;
+        }
+
+        /* Transcript Container */
+        #transcript-container {
+            opacity: 0;
+            visibility: hidden;
+            position: fixed;
+            bottom: 0px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            max-width: 600px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #00FFFF;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: sans-serif;
+            z-index: 100;
+            transition: opacity 0.3s ease;
+            backdrop-filter: blur(10px);
+            opacity: 0;
+        }
+
+        /* Hidden face recognition elements */
+        #faceVideo {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        /* Loading spinner for face recognition */
+        .face-loading {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #00FFFF;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 12px;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+        }
+
+        .face-spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #00FFFF;
+            border-radius: 50%;
+            width: 12px;
+            height: 12px;
+            animation: spin 2s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Face recognition result display */
+        #faceRecognitionResult {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #00FFFF;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 14px;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        #faceRecognitionResult.visible {
+            opacity: 1;
+        }
+
+        /* Mic Button Styles */
+        .mic-button {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            width: 50px;
+            height: 50px;
+            background-color: #00FFFF;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 200;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.7);
+            border: 2px solid #00FFFF;
+            transition: all 0.3s ease;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .mic-button.active {
+            background-color: #FF4081;
+            box-shadow: 0 0 25px rgba(255, 64, 129, 0.8);
+        }
+
+        /* Mic Icon */
+        .mic-button svg {
+            width: 24px;
+            height: 24px;
+            fill: #333;
+            transition: fill 0.3s ease;
+        }
+
+        .mic-button.active svg {
+            fill: #ffffff;
+        }
+
+        /* Status Text */
+        .status {
+            position: relative;
+            bottom: 70px;
+            right: 10px;
+            font-size: 16px;
+            color: #00FFFF;
+            opacity: 0.8;
+            z-index: 150;
+            transition: opacity 0.3s ease;
+        }
+
+        .status.active {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="logo">MOBIUS</div>
+    <div id="recordingIndicator" class="recording-indicator"></div>
+    <div id="longpressIndicator" class="longpress-indicator"></div>
+
+    <div class="container">
+        <input type="checkbox" id="toggle">
+
+        <label class="play-button" for="toggle">
+            <div class="play-wrapper">
+                <div class="play-glow"></div>
+                <div class="play-outer"></div>
+                <div class="play-inner">
+                    <div class="play-icon"></div>
+                </div>
+            </div>
+        </label>
+
+        <label class="eyes" for="toggle">
+            <div class="eyes-wrapper">
+                <div id="leftEye" class="eye"></div>
+                <div id="rightEye" class="eye"></div>
+            </div>
+        </label>
+
+        <div id="listeningContainer" class="listening-container">
+            <div class="audio-bar" id="bar1"></div>
+            <div class="audio-bar" id="bar2"></div>
+            <div class="audio-bar" id="bar3"></div>
+            <div class="audio-bar" id="bar4"></div>
+            <div class="audio-bar" id="bar5"></div>
+            <div class="audio-bar" id="bar6"></div>
+            <div class="audio-bar" id="bar7"></div>
+        </div>
+
+        <div class="button-container">
+            <button id="micButton" class="mic-button">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+                    <path
+                        d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+                </svg>
+            </button>
+            <div id="status" class="status">Tap to speak</div>
+            <div id="transcriptContainer" class="transcript-container">
+                <div id="transcriptText"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Face Recognition Elements -->
+    <video id="faceVideo" width="720" height="560" autoplay muted></video>
+    <div id="faceLoading" class="face-loading">
+        <div class="face-spinner"></div>
+        Loading face models...
+    </div>
+    <div id="faceRecognitionResult"></div>
+
+    <!-- Mediapipe Face Mesh for Mobius -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+
+    <!-- Face API for Face Recognition -->
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+
+    <script>
+        // Combined functionality for both Mobius UI and Face Recognition
+
+        // Store greeted names (persists across detections)
+        const greetedNames = {
+            "unknown": true,
+            "aswin_m": false,
+            "vatsav": false,
+            "Thor": false,
+            "Captain America": false,
+            // Add more names if needed
+        };
+
+        // ==================== Mobius UI Functionality ====================
+        const videoElement = document.createElement('video');
+        videoElement.autoplay = true;
+        videoElement.playsInline = true;
+
+        const faceMesh = new FaceMesh({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+        });
+        faceMesh.onResults(onFaceMeshResults);
+
+        async function initCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                videoElement.srcObject = stream;
+                videoElement.onloadedmetadata = () => {
+                    const camera = new Camera(videoElement, {
+                        onFrame: async () => {
+                            await faceMesh.send({ image: videoElement });
+                        },
+                        width: 640,
+                        height: 480
+                    });
+                    camera.start();
+                };
+            } catch (error) {
+                console.error('Error accessing the camera:', error);
+            }
+        }
+        initCamera();
+
+        function onFaceMeshResults(results) {
+            if (results.multiFaceLandmarks) {
+                results.multiFaceLandmarks.forEach(landmarks => {
+                    const keypoints = landmarks.map(landmark => ({
+                        x: landmark.x * videoElement.videoWidth,
+                        y: landmark.y * videoElement.videoHeight
+                    }));
+
+                    const centerX = keypoints.reduce((sum, point) => sum + point.x, 0) / keypoints.length;
+                    const centerY = keypoints.reduce((sum, point) => sum + point.y, 0) / keypoints.length;
+
+                    const normalizedX = (-((centerX / videoElement.videoWidth) - 0.5) * 20).toFixed(0);
+                    const normalizedY = (((centerY / videoElement.videoHeight) - 0.5) * 20).toFixed(0);
+
+                    moveEyes(normalizedX, normalizedY);
+                });
+            }
+        }
+
+        function moveEyes(x, y) {
+            const maxMovementX = 20;
+            const maxMovementY = 20;
+
+            const leftEye = document.getElementById('leftEye');
+            const rightEye = document.getElementById('rightEye');
+
+            leftEye.style.transform = `translate(${x * maxMovementX}px, ${y * maxMovementY}px)`;
+            rightEye.style.transform = `translate(${x * maxMovementX}px, ${y * maxMovementY}px)`;
+        }
+
+        function setEmotion(emotion) {
+            const leftEye = document.getElementById('leftEye');
+            const rightEye = document.getElementById('rightEye');
+            const listeningContainer = document.getElementById('listeningContainer');
+
+            leftEye.classList.remove('emotion-blinking', 'emotion-thinking');
+            rightEye.classList.remove('emotion-blinking', 'emotion-thinking');
+            listeningContainer.classList.remove('active');
+
+            switch (emotion) {
+                case 'blinking':
+                    leftEye.classList.add('emotion-blinking');
+                    rightEye.classList.add('emotion-blinking');
+                    break;
+                case 'thinking':
+                    leftEye.classList.add('emotion-thinking');
+                    rightEye.classList.add('emotion-thinking');
+                    break;
+                case 'listening':
+                    listeningContainer.classList.add('active');
+                    animateAudioBars();
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        function animateAudioBars() {
+            if (!document.getElementById('listeningContainer').classList.contains('active')) return;
+
+            const bars = Array.from(document.querySelectorAll('.audio-bar'));
+
+            bars.forEach(bar => {
+                const height = Math.floor(Math.random() * 100) + 20;
+                bar.style.height = `${height}%`;
+            });
+
+            setTimeout(animateAudioBars, 100);
+        }
+
+        // Speech Recognition Functionality
+        const micButton = document.getElementById('micButton');
+        const status = document.getElementById('status');
+        const transcriptContainer = document.getElementById('transcriptContainer');
+        const transcriptText = document.getElementById('transcriptText');
+        
+        document.getElementById("transcriptText").innerHTML = "";
+        document.getElementById("transcriptContainer").style.display = "none";
+
+        let recognition = null;
+        let isListening = false;
+        let isProcessingAPI = false;
+        let speaking = false;
+        let silenceTimeout = null;
+        let currentAudio = null;
+
+        // Initialize Speech Recognition
+        function initializeSpeechRecognition() {
+            if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+                status.textContent = 'Speech recognition not supported in this browser';
+                return null;
+            }
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const newRecognition = new SpeechRecognition();
+            newRecognition.continuous = true;
+            newRecognition.interimResults = true;
+            newRecognition.maxAlternatives = 1;
+            newRecognition.lang = 'en-US';
+            return newRecognition;
+        }
+
+        let wakeWord = "hey sanjay";
+        let wakeRecognition;
+
+        function startWakeWordDetection() {
+            wakeRecognition = initializeSpeechRecognition();
+            if (!wakeRecognition) {
+                status.textContent = 'Could not initialize wake word detection';
+                return;
+            }
+            wakeRecognition.continuous = true;
+            wakeRecognition.interimResults = false;
+            wakeRecognition.onresult = function (event) {
+                const lastResult = event.results[event.results.length - 1];
+                const transcript = lastResult[0].transcript.trim().toLowerCase();
+                console.log("Detected: ", transcript);
+                if (transcript.includes(wakeWord)) {
+                    console.log("Wake word detected! Starting speech recognition...");
+                    wakeRecognition.stop();
+                    startListening();
+                }
+            };
+            wakeRecognition.onerror = function (event) {
+                console.error("Wake word recognition error:", event.error);
+            };
+            wakeRecognition.onend = function () {
+                if (!isListening) {
+                    wakeRecognition.start();
+                }
+            };
+            wakeRecognition.start();
+        }
+
+        function startListening() {
+            if (isListening || isProcessingAPI) return;
+            try {
+                if (recognition) {
+                    recognition.stop();
+                }
+                recognition = initializeSpeechRecognition();
+                if (!recognition) {
+                    status.textContent = 'Could not initialize speech recognition';
+                    return;
+                }
+                recognition.continuous = true;
+                recognition.interimResults = false;
+                micButton.classList.add('listening');
+                micButton.classList.remove('speaking');
+                status.textContent = 'Listening...';
+                transcriptContainer.classList.add('active');
+                transcriptText.textContent = '';
+                
+                recognition.onstart = function () {
+                    isListening = true;
+                    console.log('Speech recognition started');
+                };
+                recognition.onresult = function (event) {
+                    const lastResult = event.results[event.results.length - 1];
+                    const transcript = lastResult[0].transcript.trim();
+                    transcriptText.textContent = transcript;
+                    if (lastResult.isFinal) {
+                        processFinalTranscript(transcript);
+                    }
+                };
+                recognition.onerror = function (event) {
+                    console.error('Speech recognition error:', event.error);
+                    if (event.error === 'no-speech' || event.error === 'aborted' || event.error === 'network') {
+                        stopListening();
+                    }
+                };
+                recognition.onend = function () {
+                    if (isListening) {
+                        recognition.start();
+                    } else {
+                        startWakeWordDetection();
+                    }
+                };
+                recognition.start();
+            } catch (error) {
+                console.error('Failed to start speech recognition:', error);
+                status.textContent = 'Error starting recognition';
+                isListening = false;
+                micButton.classList.remove('listening');
+            }
+        }
+
+        function stopListening() {
+            if (recognition) {
+                isListening = false;
+                recognition.stop();
+                micButton.classList.remove('listening');
+                status.textContent = 'Tap to speak';
+                if (!isProcessingAPI && !speaking) {
+                    transcriptContainer.classList.remove('active');
+                }
+            }
+        }
+
+        function stopSpeaking() {
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+                currentAudio = null;
+            }
+            speaking = false;
+            micButton.classList.remove('speaking');
+            status.textContent = 'Tap to speak';
+            setTimeout(() => {
+                if (!isListening) {
+                    transcriptContainer.classList.remove('active');
+                    setTimeout(() => {
+                        transcriptText.textContent = '';
+                    }, 300);
+                }
+            }, 500);
+        }
+
+        function processFinalTranscript(transcript) {
+            if (!transcript) return;
+            console.log('Processing final transcript:', transcript);
+            isProcessingAPI = true;
+            if (isListening) {
+                stopListening();
+            }
+            status.textContent = 'Processing...';
+            
+            query({ transcript: transcript })
+                .then(response => {
+                    console.log('API response:', response);
+                    transcriptText.textContent = response.text;
+                    status.textContent = 'Response';
+                    k =response.audio_saved_at
+                    const new_audio_url = `https://srivatsavdamaraju-ui-flask.hf.space/${k}`;
+                    // console.log(response.audio_saved_at)
+                    // playAudio(response.audio_url);
+                    console.log('New audio URL:', new_audio_url);
+                    playAudio(new_audio_url)
+                })
+                .catch(error => {
+                    console.error('API error:', error);
+                    transcriptText.textContent = 'Sorry, there was an error processing your request.';
+                    status.textContent = 'Error';
+                })
+                .finally(() => {
+                    isProcessingAPI = false;
+                });
+        }
+
+        function playAudio(audioUrl) {
+            if (currentAudio) {
+                stopSpeaking();
+            }
+            currentAudio = new Audio(audioUrl);
+            currentAudio.play();
+            currentAudio.onplay = () => {
+                speaking = true;
+                status.textContent = 'Speaking...';
+                micButton.classList.add('speaking');
+            };
+            currentAudio.onended = () => {
+                speaking = false;
+                micButton.classList.remove('speaking');
+                status.textContent = 'Tap to speak';
+                setTimeout(() => {
+                    if (!isListening) {
+                        transcriptContainer.classList.remove('active');
+                        setTimeout(() => {
+                            transcriptText.textContent = '';
+                        }, 300);
+                    }
+                }, 1000);
+            };
+            currentAudio.onerror = (event) => {
+                speaking = false;
+                micButton.classList.remove('speaking');
+                status.textContent = 'Error speaking';
+                console.error('Audio playback error:', event);
+            };
+        }
+
+        // async function query(data) {
+        //     try {
+        //         const response = await fetch(
+        //             "https://srivatsavdamaraju-neural-layer-sanjay.hf.space/analyze",
+        //             {
+        //                 method: "POST",
+        //                 headers: {
+        //                     "Content-Type": "application/json"
+        //                 },
+        //                 body: JSON.stringify(data)
+        //             }
+        //         );
+        //         if (!response.ok) {
+        //             throw new Error(`API responded with status: ${response.status}`);
+        //         }
+        //         return await response.json();
+        //     } catch (error) {
+        //         console.error('API query error:', error);
+        //         throw error;
+        //     }
+        // }
+        async function query(data) {
+    const form = new FormData();
+    form.append("query", data.transcript); // Using "query" as the parameter name
+    
+    try {
+        const response = await fetch(
+            "https://srivatsavdamaraju-ui-flask.hf.space/analyze",
+            {
+                method: "POST",
+                body: form, // Send as FormData instead of JSON
+                // Don't set Content-Type header - let the browser set it with boundary
+                signal: AbortSignal.timeout(8000) // 8 second timeout
+            }
+        );
+        
+        if (!response.ok) {
+            throw new Error(`API responded with status: ${response.status}`);
+        }
+        
+        return await response.json();
+    } catch (error) {
+        console.error('API query error:', error);
+        return {
+            text: "I'm having trouble connecting right now. Please try again later.",
+            audio_url: ""
+        };
+    }
+}
+
+        // ==================== Face Recognition Functionality ====================
+        const video = document.getElementById('faceVideo');
+        const loadingElement = document.getElementById('faceLoading');
+        const resultElement = document.getElementById('faceRecognitionResult');
+
+        Promise.all([
+            faceapi.nets.faceRecognitionNet.loadFromUri('/models'),
+            faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
+            faceapi.nets.ssdMobilenetv1.loadFromUri('/models')
+        ]).then(startFaceRecognition)
+            .catch(err => {
+                console.error('Error loading face-api models:', err);
+                loadingElement.textContent = 'Failed to load face models';
+                loadingElement.style.color = '#FF3333';
+            });
+
+        async function startFaceRecognition() {
+            loadingElement.style.display = 'none';
+
+            const labeledFaceDescriptors = await loadLabeledImages();
+            const faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.6);
+
+            try {
+                const videoStream = await navigator.mediaDevices.getUserMedia({ video: {} });
+                video.srcObject = videoStream;
+
+                video.onloadedmetadata = () => {
+                    video.play();
+                    detectFaces(faceMatcher);
+                };
+            } catch (err) {
+                console.error('Error accessing camera for face recognition:', err);
+            }
+        }
+
+        async function detectFaces(faceMatcher) {
+            const canvas = faceapi.createCanvasFromMedia(video);
+            const displaySize = { width: video.videoWidth, height: video.videoHeight };
+            canvas.width = displaySize.width;
+            canvas.height = displaySize.height;
+            faceapi.matchDimensions(canvas, displaySize);
+
+            setInterval(async () => {
+                const detections = await faceapi.detectAllFaces(video)
+                    .withFaceLandmarks()
+                    .withFaceDescriptors();
+
+                const resizedDetections = faceapi.resizeResults(detections, displaySize);
+                const results = resizedDetections.map(d => faceMatcher.findBestMatch(d.descriptor));
+
+                const detectedFaces = results.map(result => result.toString());
+
+                if (detectedFaces.length > 0) {
+                    fetch('http://127.0.0.1:5000/detected_faces', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ faces: detectedFaces })
+                    }).catch(err => console.error('Error sending detected faces:', err));
+                }
+
+                results.forEach(result => {
+                    console.log('Detected: ' + result.toString());
+                    showDetectionResult(result.toString());
+                });
+
+                if (results.length === 0) {
+                    resultElement.classList.remove('visible');
+                }
+            }, 1000);
+        }
+
+        function showDetectionResult(resultText) {
+            const name = resultText.split(' ')[0];
+            const greetingMessage = `Hello ${name}!`;
+
+            resultElement.textContent = greetingMessage;
+            resultElement.classList.add('visible');
+
+            if (greetedNames[name] === false || greetedNames[name] === undefined) {
+                speakGreeting(greetingMessage);
+                greetedNames[name] = true;
+                console.log("Greeted:", greetedNames);
+            }
+        }
+
+        function speakGreeting(text) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.volume = 1;
+                utterance.rate = 1;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function resetGreetedNames() {
+            for (const name in greetedNames) {
+                greetedNames[name] = false;
+            }
+        }
+
+        function loadLabeledImages() {
+            const labels = ['Black Widow', 'Captain America', 'Captain Marvel', 'Hawkeye', 'Jim Rhodes', 'Thor', 'Tony Stark', 'vatsav', 'ashwini', 'vijay_ps', 'aswin_m'];
+
+            return Promise.all(
+                labels.map(async label => {
+                    const descriptions = [];
+                    try {
+                        for (let i = 1; i <= 2; i++) {
+                            const img = await faceapi.fetchImage(`https://raw.githubusercontent.com/LAMENTIS1/face_recog/master/labeled_images/${label}/${i}.jpg`);
+                            const detections = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
+
+                            if (detections) {
+                                descriptions.push(detections.descriptor);
+                            }
+                        }
+                    } catch (error) {
+                        console.error(`Error loading images for ${label}:`, error);
+                    }
+
+                    if (descriptions.length > 0) {
+                        return new faceapi.LabeledFaceDescriptors(label, descriptions);
+                    }
+                })
+            ).then(descriptors => descriptors.filter(descriptor => descriptor !== undefined));
+        }
+
+        // Initialize the app
+        function init() {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ audio: true })
+                    .then(() => {
+                        console.log('Microphone permission granted');
+                    })
+                    .catch(error => {
+                        console.error('Microphone permission denied:', error);
+                        status.textContent = 'Microphone access denied';
+                    });
+            }
+
+            micButton.addEventListener('click', () => {
+                if (speaking) {
+                    stopSpeaking();
+                } else if (isListening) {
+                    stopListening();
+                    stopSpeaking();
+                } else if (!isProcessingAPI) {
+                    startListening();
+                }
+            });
+
+            // Start wake word detection when page loads
+            startWakeWordDetection();
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
